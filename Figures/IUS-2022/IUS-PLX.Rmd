@@ -1,0 +1,96 @@
+---
+title: "All Cells"
+author: Alina Kline-Schoder
+date: | 
+      | Started on 06/01/2021
+      | Compiled: `r format(Sys.Date(), "%B %d, %Y")`
+output:
+  github_document:
+    toc: yes
+---
+
+
+```{r message = FALSE, echo = FALSE}
+rm(list = ls())
+#Sys.setenv(JAVA_HOME = "C:/Program Files (x86)/Java/jdk1.8.0_311/")
+library(cowplot)
+library(Seurat)
+require(ggdendro)
+require(Rmisc)
+library(BiocManager)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(tidyverse)
+library(ggsignif)
+library(broom)
+library(rstatix)
+library(ggpmisc)
+library(cowplot)
+setwd("/media/alina/Backup1/Scripts/R/FUSMicrogliaClean_SavedData/2021_12_PLXSonications/")
+CavitationDose<-read.csv('CavitationDose-Table 1.csv')
+MRIs<-read.csv('MRISize-MRIs.csv')
+Info<-read.csv('TreatmentMice-Table 1.csv')
+rownames(Info)<-Info$Mouse.Name
+```
+
+```{r}
+library(dplyr)
+CustomColors<-c("#BEC3C6","#a53860")
+CavitationDose$Group<-Info[CavitationDose$Mouse,]$Feed
+
+MRIs$Day.1.Norm<-MRIs$Day.1/MRIs$Day.0*100
+MRIs$Group<-Info[MRIs$Mouse,]$Feed
+
+
+# Removing repopulating
+MRIs<-MRIs[MRIs$Group!="Repopulating",]
+MRIs$Group<-factor(MRIs$Group,levels=c("Control","Depletion"))
+Day1<-ggplot(MRIs,aes(x=Group,y=Day.1.Norm,color=Group,fill=Group))+geom_boxplot(color="black",aes(fill=Group),outlier.colour = NA,outlier.fill = NA)+
+  geom_dotplot(binaxis='y', stackdir='center',dotsize=0.5,position=position_dodge(width=0.75),color="black")+
+  stat_compare_means(method="t.test",size=3,label="p.signif",show.legend = FALSE,hide.ns = TRUE,label.y.npc = 0.9,label.x.npc = 0.4)+
+  scale_fill_manual(values=CustomColors)+
+  scale_color_manual(values=CustomColors)+theme_bw()+ylab("Day 1 BBB Opening Volume\n (% compared to Day 0)")+xlab("Treatment")+theme(legend.position = "none",axis.title = element_text(size=6),axis.text = element_text(size=6),plot.margin = margin(0.25,0.25,0.25,0.5,"cm"))+scale_y_continuous(limits=c(0,150),expand=c(0,0))
+
+
+# Days 0pen
+Info<-Info[!is.na(Info$Days.Open),]
+Info_New<-Info[Info$Feed!="Repopulating",]
+C<-ggplot(Info_New,aes(x=Feed,y=Days.Open,color=Feed,fill=Feed))+geom_boxplot(color="black",outlier.color = NA,outlier.fill = NA)+geom_dotplot(binaxis='y', stackdir='center',dotsize=0.5,position=position_dodge(width=0.75),color="black")+scale_fill_manual(values=CustomColors)+scale_color_manual(values=CustomColors)+theme_bw()+stat_compare_means(method="t.test",label="p.signif",label.x.npc = 0.4,label.y.npc = 0.9,size=3)+ylab("BBB Opening Duration (Days)")+theme(legend.position="none")+scale_y_continuous(limits = c(0,8),expand = c(0,0))+theme(axis.title= element_text(size=6),axis.text = element_text(size=6),plot.margin = margin(0.25,0.25,0.25,0.5,"cm"))+xlab("Treatment")
+```
+
+# ELISA
+```{r}
+setwd("/media/alina/Backup1/Scripts/R/FUSMicrogliaClean_SavedData/2022_0204_GFPElisa_Real")
+ELISA<-read.csv("Samples-Table 1.csv")
+ELISA<-ELISA[ELISA$Treatment %in% c("Control","Depletion"),]
+ELISA[ELISA$Sample.Concentration..pg.mL.<0,]$Sample.Concentration..pg.mL.<-0
+ELISA$Sample.Concentration..pg.mL.<-ELISA$Sample.Concentration..pg.mL./1000
+ELPlot<-ggplot(ELISA,aes(x=Treatment,y=Sample.Concentration..pg.mL.,color=Treatment,fill=Treatment))+geom_boxplot(color="black",outlier.colour = NA,outlier.fill = NA)+geom_dotplot(binaxis='y', stackdir='center',dotsize=0.5,fill="black",color="black",outlier.colour = NA,outlier.fill = NA)+scale_fill_manual(values=CustomColors)+scale_color_manual(values=CustomColors)+theme_bw()+stat_compare_means(method="t.test",label="p.signif",label.x.npc = 0.4,label.y.npc = 0.85,size=3)+ylab("Cx3cr1 (ng/mL)")+theme(legend.position="none")+scale_y_continuous(expand = c(0,0))+theme(axis.title= element_text(size=6),axis.text = element_text(size=6),plot.margin = margin(0.5,0.5,0.5,0.5,"cm"))+xlab("Treatment")
+```
+
+
+
+# Putting it together
+```{r}
+Placeholder<-ggplot()+geom_blank()+theme_void()
+
+Images<-plot_grid(Placeholder,Placeholder,nrow=2,labels = c("b",""))
+Left<-plot_grid(Placeholder,plot_grid(Images,ELPlot,nrow=1,labels = c("","c"),rel_widths = c(1,1.5)),labels = c("a"),nrow=2,rel_heights = c(1,1.5))
+
+Top<-plot_grid(Placeholder,Placeholder,ELPlot+theme(plot.margin = margin(0.25,0.25,0.25,0.25,"cm")),nrow=1,labels=c("a","b","c"),rel_widths = c(0.75,0.75,1))
+ggsave("IUS-Poster-PLX1.png",width = 5,height = 1.5,units = "in",plot = Top,bg = "white")
+
+
+BottomBottom<-plot_grid(Day1+theme(plot.margin = margin(0.25,0.25,0,0.65,"cm")),C+theme(plot.margin = margin(0.25,0.25,0,0.65,"cm")),nrow=1,labels = c("b","c"))
+Plot2<-plot_grid(Placeholder,BottomBottom,nrow=2,rel_heights=c(0.6,1),labels=c("a",""))
+ggsave("IUS-Poster-PLX.png",width = 4,height = 3,units = "in",plot = Plot2,bg = "white")
+```
+
+```{r}
+BottomBottom<-plot_grid(Day1+theme(plot.margin = margin(0.25,0.25,0,0.65,"cm")),C+theme(plot.margin = margin(0.25,0.25,0,0.65,"cm")),nrow=1,labels = c("b","c"))
+Plot2<-plot_grid(Placeholder,BottomBottom,nrow=1,rel_widths =c(0.5,1),labels=c("a",""))
+ggsave("IUS-Lecture-PLX.png",width = 8,height = 2,units = "in",plot = Plot2,bg = "white")
+```
+
