@@ -157,7 +157,7 @@ BC1<-ggplot(tab,aes(x=Var2,y=Var1,fill=Freq_Norm))+geom_tile()+scale_fill_gradie
 ```
 
 ```{r}
-setwd("/media/alina/Backup1/Scripts/R/FUSMicrogliaClean/Figures/IUS-2022/2022_MGValidationFACSResults/")
+setwd("/media/alina/Backup1/Scripts/R/Seq1-2022/Figures/IUS-2022/2022_MGValidationFACSResults/")
 ColorsGroup_NoSham<-c("#FFFFFF","#9781B1","#54426B","gray","gray")
 Data<-read.csv('More-Table 1.csv')
 my_comparisons <- list( c("Naive", "1d"), c("Naive", "3d"), c("1d", "3d") )
@@ -250,3 +250,71 @@ HM_Ready<-plot_grid(grid.grabExpr(draw(HM,heatmap_legend_side="right")))
 plot_grid(HM_Ready,OntoPlot+theme(plot.margin = margin(0.25,0.25,0.25,0.25,"cm")),nrow=1,labels = c("a","b"))
 ggsave("MicrogliaDEG.png",width=8,height=2,units = "in",bg = "white")
 ```
+
+# for proceedings
+```{r}
+Onto_1d$Time<-"1d BBBO"
+Onto_3d$Time<-"3d BBBO"
+Onto_All<-rbind(Onto_1d,Onto_3d)
+BP<-c("phagocytic vesicle",
+      "macrophage chemotaxis",
+      "lysosome",
+      "extracellular exosome",
+      "regulation of immune response",
+      "response to stress",
+      "chemokine receptor binding",
+      "cell chemotaxis",
+      "cell migration")
+
+OntoPlotdata<-Onto_All[Onto_All$Term %in% BP,]
+OntoPlotdata$Time<-recode(OntoPlotdata$Time,
+                          "1d BBBO"="1d",
+                          "3d BBBO"="3d")
+OntoPlotdata$Time<-as.factor(OntoPlotdata$Time)
+KSLab<-bquote(~-Log[10] ~ italic(P[KS]))
+FisLab<-bquote(italic(P[Fis]))
+library(scales) 
+OntoPlot<-ggplot(OntoPlotdata,aes(x=Time,y=Term,color=-log(PVal_KS),size=PCT))+
+  geom_point()+
+  theme_minimal()+scale_color_viridis(guide=guide_colorbar(title=KSLab,title.position = "top"),option = "plasma")+ scale_size_continuous(guide=guide_legend(title="Genes (%)",title.position = "top"),breaks = c(25,50,75),limits=c(25,75),range = c(0.5,4))+
+  theme(legend.position = "right",
+        axis.text = element_text(size=10),
+        legend.direction = "vertical",
+        legend.box = "vertical",
+        legend.key.height = unit(0.3,"cm"),
+        legend.key.size = unit(3,"mm"),
+        legend.spacing = unit(0,"mm"),
+        plot.margin = margin(0.25,0.5,0.25,0.25,"cm"),
+        axis.title = element_blank(),
+        legend.spacing.x = unit(0,"cm"),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8))
+```
+
+
+
+```{r}
+Dim<-DimPlot(Microglia,group.by = "seurat_clusters",label=TRUE,cols =MicrogliaClusterColors2,label.box = TRUE,label.size = 2)+theme(plot.title = element_blank(),
+                                                                                                                 axis.ticks = element_blank(),
+                                                                                                                 axis.text = element_blank(),
+                                                                                                                 legend.position = "none")+guides(color=guide_legend(override.aes = list(size=3),ncol=1))+scale_y_continuous(limits=c(-9.5,7))+scale_x_continuous(limits=c(-4.5,7.25)
+)
+```
+
+
+```{r}
+tab<-as.data.frame(table(Microglia$Treatment,Microglia$seurat_clusters))
+tot<-as.data.frame(table(Microglia$Treatment))
+tab$Freq_Norm<-tab$Freq/tot[tab$Var1,]$Freq*100
+tab$Var1<-recode(tab$Var1,"1d BBBO"="1d",
+                 "3d BBBO"="3d")
+BC2<-ggplot(tab,aes(x="",y=Freq_Norm,fill=Var2))+geom_bar(stat="identity", width=1) + coord_polar("y", start=0)+theme_void()+facet_wrap(.~Var1,nrow=2,strip.position = "top")+theme(legend.position = "none",strip.text = element_text(size=12),plot.margin = margin(-0.05,0.25,0.25,0.5,"cm"))+scale_fill_manual(values=MicrogliaClusterColors2)
+BC2
+```
+
+```{r}
+plot_grid(Dim,BC2,OntoPlot,rel_widths  = c(1,0.5,1.5),labels = c("a","b","c"),nrow=1)
+ggsave("MicrogliaDEG-IUSProceedings.png",width=8,height=2,units = "in",bg = "white")
+
+```
+

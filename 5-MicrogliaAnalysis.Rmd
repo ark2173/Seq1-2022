@@ -34,10 +34,7 @@ library(ggpmisc)
 library(gridExtra)
 library(here)
 library(circlize)
-setwd("F:/Data/Sequencing/SavedData")
-load("4-Microglia.RData")
-setwd("F:/Data/Sequencing/Files/")
-source("Ontology.R")
+load("/media/alina/Backup1/Papers/MG1.0/FUSMicrogliaClean_SavedData/4-Microglia.RData")
 DefaultAssay(Microglia)<-"RNA"
 Microglia<-ScaleData(Microglia)
 ```

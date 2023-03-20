@@ -9,13 +9,12 @@ output:
 ```{r setup, include=FALSE}
 rm(list = ls())
 library(Seurat)
-HashID<-read.csv('F:/Data/Sequencing/Files/DONOTDELETE-HashingCode.csv',row.names = 1)
 ```
 
 # Loading
 
 ```{r Run1}
-Raw <- Read10X(data.dir = "D:/RawData/SequencingData/CellRangerOuts/EA001/filtered_feature_bc_matrix")
+Raw <- Read10X(data.dir = "/media/alina/Backup1/RawData/CellRangerOuts/EA001/filtered_feature_bc_matrix/")
 EA001 <- CreateSeuratObject(counts = Raw, project = "EA001")
 EA001[["percent.mt"]] <- PercentageFeatureSet(EA001,pattern = "^mt-")
 EA001[["percent.ribo"]] <- PercentageFeatureSet(EA001,pattern = "^Rp")
@@ -24,7 +23,7 @@ EA001$Treatment_Specific<-"1d MB Sham"
 ```
 
 ```{r Run2}
-Raw <- Read10X(data.dir = "F:/Data/Sequencing/CellRangerOuts/EA002/filtered_feature_bc_matrix")
+Raw <- Read10X(data.dir = "/media/alina/Backup1/Papers/MG1.0/2021_PaperSubmission/Run0_Exp_Counts.csv")
 EA002 <- CreateSeuratObject(counts = Raw, project = "EA002")
 EA002[["percent.mt"]] <- PercentageFeatureSet(EA002,pattern = "^mt-")
 EA002[["percent.ribo"]] <- PercentageFeatureSet(EA002,pattern = "^Rp")
