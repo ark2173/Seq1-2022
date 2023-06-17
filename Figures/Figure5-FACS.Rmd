@@ -1,0 +1,92 @@
+---
+title: "NBME Edits - FACS"
+author: "Alina Kline-Schoder"
+date: "6/25/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+remove(list=ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(cowplot)
+library(Seurat)
+library(BiocManager)
+library(ggpubr)
+library(tidyverse)
+library(ggsignif)
+library(ComplexHeatmap)
+library(RColorBrewer)
+my_comparisons <- list( c("Naive", "1d"), c("Naive", "3d"), c("1d", "3d") )
+
+ColorsGroup_NoSham<-c("#FFFFFF","#75A0B2","#205F83","gray","gray")
+Colors_FUS_Group_Broad<-c("#FFFFFF","#A3A3A3","#75A0B2")
+Data<-read.csv('/Users/alinakline-schoder/Documents/MicrogliaPaper-Joint/Edits/2022_0630/2022_MGValidationFACSResults/More-Table 1.csv')
+```
+
+
+
+# themes
+```{r}
+ThemeAll<-theme(legend.position = "none",
+                panel.grid = element_blank(),
+                axis.text = element_text(size=8),
+                axis.title = element_text(size=10),
+                plot.margin = margin(0.5,0.5,0.25,0.25,"cm"),
+                strip.text=element_text(size=10),
+                axis.line = element_line(size=0.5,color="black"),
+                plot.title = element_blank(),
+                panel.background = element_blank())
+
+ThemeLeg<-theme(legend.position = "right",
+        legend.direction = "vertical",
+        legend.box = "vertical",
+        legend.key.size = unit(3,"mm"),
+        legend.spacing = unit(0,"mm"),
+        legend.box.spacing = margin(-0.5,0.5,0.25,0,"cm"),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8))
+
+ThemeOnto<-ThemeAll+ThemeLeg+theme(axis.title = element_blank(),axis.line = element_blank(),panel.background = element_blank())
+        
+ThemeUMAP<-ThemeAll+theme(axis.ticks = element_blank(),
+                 axis.text = element_blank())
+ThemeVolcano<-ThemeAll
+
+ThemeBoxPlot<-ThemeAll+theme(axis.title.x = element_blank())
+```
+
+# plots
+```{r}
+Data_Long<-pivot_longer(Data,cols = colnames(Data)[6:9])
+Data_Long$Group<-factor(Data_Long$Group,levels = c("Naive","1d","3d"))
+Data_Long<-Data_Long[!is.na(Data_Long$Group),]
+
+Data_Long$name<-recode(Data_Long$name,
+                       "PH.GFP..GFP."="Phagocytosis (within GFP+)",
+                       "CD45.Median..of.singlets."="CD45 MFI (within Singlets)",
+                       "CD9.Median..of.singlets."="CD9 MFI (within GFP+)")
+
+Sub<-Data_Long[Data_Long$name %in% c("CD45 MFI (within Singlets)"),]
+Bar1<-ggplot(Sub,aes(x=Group,y=value))+geom_boxplot(color="black",aes(fill=Group))+geom_point (color="black")+scale_fill_manual(values=ColorsGroup_NoSham)+ThemeBoxPlot+ylab("CD45 MFI (within Singlets)") + stat_compare_means(comparisons = my_comparisons,method = "t.test",size=3)
+
+
+Sub<-Data_Long[Data_Long$name %in% c("CD9 MFI (within GFP+)"),]
+Bar4<-ggplot(Sub,aes(x=Group,y=value))+geom_boxplot(color="black",aes(fill=Group))+geom_point(color="black")+scale_fill_manual(values=ColorsGroup_NoSham)+ThemeBoxPlot+ylab("CD9 MFI (within GFP+)") + stat_compare_means(comparisons = my_comparisons,method = "t.test",size=3)
+
+
+
+Sub<-Data_Long[Data_Long$name %in% c("Phagocytosis (within GFP+)"),]
+#Data_Long$name<-recode(Data_Long$name,
+#                       "Ph."="PH+",
+#                       "CD45."="CD45+",
+#                       "CD9."="CD9+")
+
+Bar3<-ggplot(Sub,aes(x=Group,y=value))+geom_boxplot(color="black",aes(fill=Group))+geom_point(color="black")+scale_fill_manual(values=ColorsGroup_NoSham)+ThemeBoxPlot+ylab("PhRodo positive (%)") + stat_compare_means(comparisons = my_comparisons,method = "t.test",size=3)
+```
+
+# saving
+```{r}
+plot_grid(Bar1,Bar4,Bar3,align = "hv",axis = "lrtb",labels = c("a","b","c"),nrow=1)
+ggsave("Figure5.png",width = 8.5,height = 4,units = "in",bg = "white")
+```
+

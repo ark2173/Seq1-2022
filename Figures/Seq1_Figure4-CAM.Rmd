@@ -14,36 +14,20 @@ output:
 rm(list = ls())
 library(cowplot)
 library(Seurat)
-require(ggdendro)
-require(Rmisc)
-library(Matrix)
-library(MASS)
-library(xtable)
-library(Matrix.utils)
-library(reshape2)
 library(BiocManager)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
 library(ggpubr)
 library(tidyverse)
 library(ggsignif)
-library(broom)
-library(rstatix)
-library(ggpmisc)
-library(gridExtra)
-library(here)
+library(ComplexHeatmap)
+library(circlize)
 library(RColorBrewer)
 library(sjmisc)
 library(ggrepel)
-library(viridis)
-library(ComplexHeatmap)
-setwd("D:/Scripts/R/FUSMicrogliaClean_SavedData/")
-#setwd("/Users/alinakline-schoder/Documents/Github.nosync/Data")
-load("7-CAMFigure.RData")
-load("3-AllCells.RData")
+col_fun = colorRamp2(c(-2, 0, 2), c("blue", "#D3D3D3", "orange"))
+
+load("/Users/alinakline-schoder/Documents/SavedData/7-CAMFigure.RData")
+load("/Users/alinakline-schoder/Documents/SavedData/3-AllCells.RData")
 Integrated$Treatment<-factor(Integrated$Treatment,levels=c("Naive","Sham","1d BBBO","3d BBBO"))
-ColorsAllClusters<-c("#66C2A5","#FC8D62","#8DA0CB","#E78AC3","#C59797","#A6D854","#FFD92F","#BA95C7","#D3D942","#FFD92F","#B1A884","#BA95C7")
 CAM$clusters_labeled<-recode(CAM$seurat_clusters,
                      "1"="H2-Ab1+",
                      "2"="Mrc1+",
@@ -52,45 +36,79 @@ ColorsTreatment<-c("#FFFFFF","#A3A3A3","#75A0B2","#205F83")
 names(ColorsTreatment)<-c("Naive","Sham","1d BBBO","3d BBBO")
 LinesTreatment<-c("#A3A3A3",ColorsTreatment[2:4])
 names(LinesTreatment)<-c("Naive","Sham","1d BBBO","3d BBBO")
-ColorMacrophageClusters<-c("#e07a5f","#3d405b","#81b29a")
+ColorMacrophageClusters<-c("#F3B3A6","#3d405b","#81b29a")
 names(ColorMacrophageClusters)<-levels(CAM$clusters_labeled)
-library(circlize)
-Colors_Feat<-colorRamp2(c(-2, 0, 2), c("blue", "#D3D3D3", "red"))
+Colors_Feat<-colorRamp2(c(-2, 0, 2), c("blue", "#D3D3D3", "orange"))
 CAM$Phase<-factor(CAM$Phase,levels = c("G0","G1S","S","G2M","M","MG1"))
-ColorsAllClusters[!str_contains("CAM",levels(Integrated$cluster_full),switch = T)]<-"gray"
-ColorsAllClusters[str_contains("CAM",levels(Integrated$cluster_full),switch = T)]<-"red"
+```
+# Setting themes
+```{r}
+ThemeAll<-theme(legend.position = "none",
+                panel.grid = element_blank(),
+                axis.text = element_text(size=8),
+                axis.title = element_text(size=10),
+                plot.margin = margin(0.5,0.5,0.25,0.25,"cm"),
+                strip.text=element_text(size=10),
+                axis.line = element_line(size=0.5,color="black"),
+                plot.title = element_blank(),
+                panel.background = element_blank())
+
+ThemeLeg<-theme(legend.position = "right",
+        legend.direction = "vertical",
+        legend.box = "vertical",
+        legend.key.size = unit(3,"mm"),
+        legend.spacing = unit(0,"mm"),
+        legend.box.spacing = margin(-0.5,0.5,0.25,0,"cm"),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8))
+
+ThemeOnto<-ThemeAll+ThemeLeg+theme(axis.title = element_blank(),axis.line = element_blank(),axis.ticks = element_blank())
+        
+ThemeUMAP<-ThemeAll+theme(axis.ticks = element_blank(),
+                 axis.text = element_blank())
+ThemeVolcano<-ThemeAll
+
+ThemeBoxPlot<-ThemeAll+theme(axis.title.x = element_blank())
 ```
 
 # Featureplot
 ```{r}
-Feat<-FeaturePlot(CAM,features = c("Mrc1","H2-Ab1","Ccl2","Cd74","Cd163","Trem2","Apoe","Thbs1"),ncol=4,cols = c("#D3D3D3","red"))&theme(legend.position = "none",
-                                                                                                        axis.text = element_blank(),
-                                                                                                        axis.title = element_blank(),
-                                                                                                        axis.ticks = element_blank())
+DefaultAssay(CAM)<-"RNA"
+Feat<-FeaturePlot(CAM,features = c("Mrc1","H2-Ab1","Ccl2","Cd74","Cd163","Thbs1"),ncol=3,cols = c("#D3D3D3","orange"))&ThemeUMAP&theme(axis.title = element_blank())
+
+
+FeatLeg<-grid.grabExpr(draw(Legend(col_fun = colorRamp2(c(0, 100), c("#D3D3D3","orange")), 
+                                  direction = "horizontal",
+                                 legend_width = unit(2.5,"cm"),
+                                  grid_height = unit(1,"mm"),
+                                  at=c(0,50,100),
+                                 labels=c("","",""),
+                                 title = "Normalized Expression",
+                                  labels_gp = gpar(col = "black",
+                                                  fontface="plain",
+                                                  fontsize=6),
+                                  title_gp = gpar(col = "black",angle=90,
+                                                    
+                                                  fontface="plain",
+                                                  fontsize=8))))
+
 ```
 
 
 # Clusters UMAP
 ```{r}
-Dim1<-DimPlot(CAM,group.by = "clusters_labeled",label=FALSE,cols = ColorMacrophageClusters)+theme(plot.title = element_blank(),
-                                                                                                                 axis.ticks = element_blank(),
-                                                                                                                 axis.text = element_blank(),
-                                                                                                                 legend.text = element_text(size=8),
-        legend.key.size = unit(0.1,"mm"),
-        legend.spacing = unit(0,"mm"),
-        legend.position = c(0.3,1))+guides(color=guide_legend(override.aes = list(size=4),nrow=1))+scale_y_continuous(limits=c(-6.5,5))+scale_x_continuous(limits=c(-5,7))
+Dim1<-DimPlot(CAM,group.by = "clusters_labeled",label=FALSE,cols = ColorMacrophageClusters,pt.size = 0.5)+ThemeUMAP+scale_y_continuous(limits=c(-6.5,5))+scale_x_continuous(limits=c(-5,7))
 ```
 
 
 # Heatmap
 ```{r}
-col_fun = colorRamp2(c(-2, 0, 2), c("blue", "#D3D3D3", "red"))
 Idents(CAM)<-"Treatment"
 Genes2Plot<-CAM_Treatment_Markers%>%
     group_by(cluster) %>%
     top_n(n = 15, wt = avg_log2FC)
 Sub<-subset(CAM,downsample=200)
-Data<-t(Sub@assays$SCT@data[unique(Genes2Plot$gene),])
+Data<-t(as.matrix(Sub@assays$SCT@data[unique(Genes2Plot$gene),]))
 Data<-cbind(as.data.frame(Data),Sub$clusters_labeled,Sub$Treatment)
 colnames(Data)[dim(Data)[2]-1]<-"Cluster"
 colnames(Data)[dim(Data)[2]]<-"Treatment"
@@ -100,32 +118,38 @@ Cluster<-Data$Cluster
 Data<-Data[,1:(dim(Data)[2]-2)]
 Data<-Seurat::ScaleData(t(as.matrix(Data)))
 names(ColorsTreatment)<-levels(CAM$Treatment)
-Top<-columnAnnotation(Treatment=anno_simple(Treatment,height = unit(4, "mm"),col = ColorsTreatment,border = TRUE), Cluster=anno_simple(Cluster,height=unit(2,"mm"),col=ColorMacrophageClusters),show_legend=FALSE,show_annotation_name=FALSE)
+
 HM<-Heatmap(Data,
             cluster_rows = FALSE,
             cluster_columns = FALSE,
             show_row_names = TRUE,
+            column_title = NULL,
             show_column_names = FALSE,
             row_names_side = "left",
-            top_annotation = Top,
+            top_annotation = HeatmapAnnotation(label = anno_block(gp = gpar(fill = ColorsTreatment),
+labels = c("", "Sham", "1d","3d"), labels_gp = gpar(fontsize=8,col = c("black","white","white","white"))),Cluster=anno_simple(as.character(Cluster),height=unit(2,"mm"),col = ColorMacrophageClusters,border = TRUE),show_annotation_name = F),
+
             col=col_fun,
             show_heatmap_legend = FALSE,
-            row_names_gp = gpar(fontsize=6),
+            row_names_gp = gpar(fontsize=8),
             column_split = Treatment,
-            column_title_gp = gpar(fontsize=8))
-HMLeg<-grid.grabExpr(draw(Legend(col_fun = col_fun, 
-                                  direction = "vertical",
-                                  grid_height = unit(0.5,"mm"),
-                                  grid_width=unit(1,"mm"),
+column_labels = NULL)
+
+
+
+HMLegGene<-grid.grabExpr(draw(Legend(col_fun = col_fun, 
+                                  direction = "horizontal",
+                                 legend_width = unit(2.5,"cm"),
+                                  grid_height = unit(1,"mm"),
                                   at=c(-2,0,2),
+                                 title = "Normalized Expression",
                                   labels_gp = gpar(col = "black",
                                                   fontface="plain",
-                                                  fontsize=6),
-                                  title_gp = gpar(col = "black",
-                                                  fontface="plain",
                                                   fontsize=8),
-                                  labels = c("-2", "0", "2"))))
-HM_Ready<-plot_grid(grid.grabExpr(draw(HM)),HMLeg,rel_widths = c(10,1),nrow=1)
+                                  title_gp = gpar(col = "black",angle=90,
+                                                  fontface="plain",
+                                                  fontsize=8))))
+HMGenes<-grid.grabExpr(draw(HM))
 ```
 
 # Volcano plots
@@ -138,38 +162,32 @@ toptable[toptable$p_val_adj>0.05,]$lab<-NA
 toptable[abs(toptable$avg_log2FC)<1,]$lab<-NA
 toptable$xvals <- toptable[['avg_log2FC']]
 toptable$yvals <- -log10(toptable[['p_val_adj']])
-xlab<-bquote(~Log[2] ~ "fold change")
+xlab<-bquote(~Log[2] ~ "FC")
 ylab<-bquote(~-Log[10] ~ italic(P))
-Volcano24<-ggplot(toptable, aes(x = xvals, y = yvals)) + geom_point(na.rm = TRUE,size=0.1,color=ColorsTreatment[3])+ labs(title = '1d BBBO v Sham')+xlab(xlab) + ylab(ylab) + geom_label_repel(aes(label=lab),size=3,label.padding = unit(0.1, "lines"))+theme(
-  panel.grid = element_blank(),
-  plot.margin=margin(0.5,0.5,0.5,0.5,"cm"),
-  panel.background = element_blank(),
-  plot.title = element_text(size=10),
-  axis.line = element_line(size=0.1),
-  axis.text = element_text(size=8),
-  axis.title = element_text(size=10))+scale_y_continuous(expand=c(0,0))
+toptable$Significant<-"black"
+toptable[toptable$p_val_adj<0.05,]$Significant<-ColorsTreatment[3]
+
+Volcano24<-ggplot(toptable, aes(x = xvals, y = yvals)) + geom_point(na.rm = TRUE,size=0.1,color=toptable$Significant)+xlab(xlab) + ylab(ylab) + geom_label_repel(aes(label=lab),size=3,label.padding = unit(0.1, "lines"))+scale_y_continuous(expand=c(0,0))+ThemeVolcano
+
 
 
 
 
 toptable <- as.data.frame(Markers_3d)
 toptable$lab <- rownames(Markers_3d)
-Genes<-c("Malat1","Pf4","Lgals3","Ifitm3","Fos","Mrc1","Vim")
+Genes<-c("Malat1","Ifitm3","Fos","Mrc1","Vim")
 toptable[!(toptable$lab %in% Genes),]$lab<-NA
 toptable[toptable$p_val_adj>0.05,]$lab<-NA
 toptable[abs(toptable$avg_log2FC)<1,]$lab<-NA
 toptable$xvals <- toptable[['avg_log2FC']]
 toptable$yvals <- -log10(toptable[['p_val_adj']])
-xlab<-bquote(~Log[2] ~ "fold change")
+xlab<-bquote(~Log[2] ~ "FC")
 ylab<-bquote(~-Log[10] ~ italic(P))
-Volcano72<-ggplot(toptable, aes(x = xvals, y = yvals)) + geom_point(na.rm = TRUE,size=0.1,fill=ColorsTreatment[4])+ labs(title = '3d BBBO v Sham')+xlab(xlab) + ylab(ylab) + geom_label_repel(aes(label=lab),size=3,label.padding = unit(0.1, "lines"))+theme(
-  panel.grid = element_blank(),
-  plot.title = element_text(size=10),
-  plot.margin=margin(0.5,0.5,0.5,0.5,"cm"),
-  panel.background = element_blank(),
-  axis.line = element_line(size=0.1),
-  axis.text = element_text(size=8),
-  axis.title = element_text(size=10))+scale_y_continuous(expand=c(0,0))
+toptable$Significant<-"black"
+toptable[toptable$p_val_adj<0.05,]$Significant<-ColorsTreatment[4]
+
+
+Volcano72<-ggplot(toptable, aes(x = xvals, y = yvals)) + geom_point(na.rm = TRUE,size=0.1,color=toptable$Significant)+xlab(xlab) + ylab(ylab) + geom_label_repel(aes(label=lab),size=3,label.padding = unit(0.1, "lines"))+ThemeVolcano+scale_y_continuous(expand=c(0,0))
 ```
 
 # bar charts
@@ -177,22 +195,93 @@ Volcano72<-ggplot(toptable, aes(x = xvals, y = yvals)) + geom_point(na.rm = TRUE
 tab<-as.data.frame(table(CAM$Treatment,CAM$Phase))
 tot<-as.data.frame(table(CAM$Treatment))
 tab$Freq_Norm<-tab$Freq/tot[tab$Var1,]$Freq*100
-BC3<-ggplot(tab,aes(x=Var2,y=Var1,fill=Freq_Norm))+geom_tile()+scale_fill_gradientn(colours = c("white","black"),limits = c(0,100),breaks=c(0,100),guide=guide_colorbar(title.position = "right",title = "Frequency (%)",label.position="right"))+geom_tile(aes(y=Var1,x=0.5),width=0.166,fill=ColorsTreatment[tab$Var1],color=LinesTreatment[tab$Var1])+scale_y_discrete(expand=c(0,0))+theme_minimal()+scale_y_discrete(expand=c(0,0))+scale_x_discrete(expand=c(0,0))+theme(legend.position = "right")+xlab("Assigned Phase")+
-  theme(legend.key.width = unit(0.2,"cm"),
-        legend.title = element_text(size=7,hjust=0.5,vjust=-4,angle=-90),
-        legend.text = element_text(size=6),
-        axis.text = element_text(size=6),
-        axis.title.x = element_text(size=8),
-        legend.box.margin = margin(0,0,-0.5,-0.25,"cm"),
-        axis.text.x = element_text(size=6,vjust=0.75,hjust=0.5),
-        axis.title.y = element_blank(),
-        plot.margin = margin(0.25,0.25,0.5,0.5,"cm"),
-        legend.key.height = unit(0.75,"cm"))
+tab<-tab[,setdiff(colnames(tab),"Freq")]
+tab<-as.data.frame(pivot_wider(tab,names_from = Var2,values_from = Freq_Norm))
+rownames(tab)<-tab$Var1
+tab<-tab[,setdiff(colnames(tab),"Var1")]
+
+HMPhase2<-Heatmap(as.matrix(tab),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        show_row_names = FALSE,
+        show_column_names = TRUE,
+        row_names_side = "left",
+        col = colorRamp2(c(0, 100), c("white", "black")),
+        row_split = c(1:4),
+        height = unit(4,"cm"),
+        width=unit(5,"cm"),
+        column_names_side = "top",
+        column_names_centered = T,
+        column_names_rot = 0,
+        column_names_gp= gpar(fontsize=8,angle=0),
+        show_heatmap_legend = FALSE,
+        left_annotation = rowAnnotation(label = anno_block(width=unit(0.5,"cm"),gp = gpar(fill = ColorsTreatment),
+labels = c("Naive", "Sham", "1d","3d"), labels_gp = gpar(fontsize=8,col = c("black","white","white","white")))), row_title = NULL)
+
+HMLeg1<-grid.grabExpr(draw(Legend(col_fun = colorRamp2(c(0, 100), c("white", "black")), 
+                                  direction = "horizontal",
+                                 legend_width = unit(2.5,"cm"),
+                                  grid_height = unit(1,"mm"),
+                                  at=c(0,50,100),
+                                 title = "Assigned Phase (%)",
+                                  labels_gp = gpar(col = "black",
+                                                  fontface="plain",
+                                                  fontsize=8),
+                                  title_gp = gpar(col = "black",angle=90,
+                                                    
+                                                  fontface="plain",
+                                                  fontsize=8))))
+
+Idents(CAM)<-"Treatment"
+dot_data<-data.frame(Treatment=CAM$Treatment,G1S=CAM$G1S.Score,S=CAM$S.Score,G2M=CAM$G2M.Score,M=CAM$M.Score,MG1=CAM$MG1.Score)
+
+dot_data <- dot_data %>%
+  group_by(Treatment) %>%
+  summarize(G1S=mean(G1S),S=mean(S),G2M=mean(G2M),M=mean(M),MG1=mean(MG1))
+dot_data<-as.data.frame(dot_data)
+rownames(dot_data)<-dot_data$Treatment
+dot_data<-dot_data[,setdiff(colnames(dot_data),"Treatment")]
+
+
+
+HMPhase1<-Heatmap(as.matrix(dot_data),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        show_row_names = FALSE,
+        show_column_names = TRUE,
+        row_names_side = "left",
+        col = col_fun,
+        row_split = c(1:4),
+        height = unit(4,"cm"),
+        width=unit(5,"cm"),
+        column_names_side = "top",
+        column_names_centered = T,
+        column_names_rot = 0,
+        column_names_gp= gpar(fontsize=8,angle=0),
+        show_heatmap_legend = FALSE,
+        left_annotation = rowAnnotation(label = anno_block(width=unit(0.5,"cm"),gp = gpar(fill = ColorsTreatment),
+labels = c("Naive", "Sham", "1d","3d"), labels_gp = gpar(fontsize=8,col = c("black","white","white","white")))), row_title = NULL)
+
+HMLeg2<-grid.grabExpr(draw(Legend(col_fun = col_fun, 
+                                  direction = "horizontal",
+                                 legend_width = unit(2.5,"cm"),
+                                  grid_height = unit(1,"mm"),
+                                  at=c(-2,0,2),
+                                 title = "Phase Score (a.u.)",
+                                  labels_gp = gpar(col = "black",
+                                                  fontface="plain",
+                                                  fontsize=8),
+                                  title_gp = gpar(col = "black",angle=90,
+                                                  fontface="plain",
+                                                  fontsize=8))))
 ```
 
 
 # ontology
 ```{r}
+KSLab<-bquote(~-Log[10] ~ italic(P[KS]))
+FisLab<-bquote(italic(P[Fis]))
+
 Terms<-c("cytokine activity",
          "response to chemokine",
          "extracellular exosome",
@@ -203,51 +292,18 @@ Terms<-c("cytokine activity",
          "endosome",
          "macrophage activation",
          "cell migration")
-Onto_1d$Treatment<-"1d BBBO"
-Onto_3d$Treatment<-"3d BBBO"
+Onto_1d$Treatment<-"1d"
+Onto_3d$Treatment<-"3d"
 All<-rbind(Onto_1d,Onto_3d)
 OntoPlotdata<-All[All$Term %in% Terms,]
-KSLab<-bquote(~-Log[10] ~ italic(P[KS]))
-FisLab<-bquote(italic(P[Fis]))
 library(scales) 
-OntPlot<-ggplot(OntoPlotdata,aes(x=Treatment,y=Term))+
-  geom_point(aes(color=-log(PVal_KS),size=PCT))+
-  theme_minimal()+
-  scale_color_viridis(guide=guide_colorbar(title=KSLab,title.position = "top")) +
-  scale_size_continuous(guide=guide_legend(title="Genes (%)",title.position = "top"))+
-  geom_tile(aes(x=Treatment,y=0),fill=c(ColorsTreatment[as.numeric(OntoPlotdata$Treatment)+2]),height=0.1)+
-  theme(legend.position = "right",
-        axis.text = element_text(size=8),
-        legend.direction = "vertical",
-        legend.box = "vertical",
-        legend.key.height = unit(3,"mm"),
-        legend.key.size = unit(2,"mm"),
-        legend.spacing = unit(0,"mm"),
-        plot.margin = margin(0.5,0.5,0.5,0.5,"cm"),
-        axis.title = element_blank(),
-        legend.spacing.x = unit(0,"cm"),
-        legend.box.spacing = margin(-0.5,0.5,0.25,0,"cm"),
-        legend.text = element_text(size=6),
-        legend.title = element_text(size=8),
-        strip.text.y = element_text(size=11))
+
+OntoPlot<-ggplot(OntoPlotdata,aes(x=Treatment,y=Term,color=-log(PVal_KS),size=PCT))+
+  geom_point()+ThemeOnto+viridis::scale_color_viridis(guide=guide_colorbar(title=KSLab,title.position = "top"))+ scale_size_continuous(guide=guide_legend(title="Genes (%)",title.position = "top"),breaks = c(10,35,60),limits=c(10,60),range = c(0.5,4))
 
 ```
 
-# Highlighting on Integrated UMAP
-```{r}
-Idents(Integrated)<-"cluster_full"
-Highlight<-DimPlot(Integrated,group.by = "cluster_full",cols=ColorsAllClusters,label=FALSE)+NoLegend()+
-  theme(plot.title = element_blank(),
-        axis.ticks = element_blank(),
-        axis.text = element_blank(),
-        axis.line = element_blank(),
-        axis.title = element_blank(),
-        plot.margin = margin(0,0,0,0,"cm"),
-        
-        panel.spacing = unit(0,"cm"),
-        panel.border = element_rect(color="black"))
 
-```
 
 # Pie chart
 ```{r}
@@ -256,19 +312,12 @@ tot<-as.data.frame(table(Integrated$Treatment))
 rownames(tot)<-tot$Var1
 tab$Freq_Norm<-tab$Freq/tot[tab$Var1,]$Freq
 tab<-tab[tab$Var2=="CAM",]
-Pie<-ggplot(tab,aes(x=Var1,y=Freq_Norm,fill=Var1,color=Var1))+stat_summary(fun="mean",geom="bar")+scale_fill_manual(values=ColorsTreatment)+scale_color_manual(values=LinesTreatment)+theme(legend.position="none")+scale_y_continuous(limits = c(0,0.65),breaks = c(0,0.25,0.5),labels=c("0%","25%","50%"),expand = c(0,0),position = "right")+theme(legend.position="none",
-        plot.margin=margin(0.5,0.5,0.5,0.5,"cm"),
-        panel.background = element_blank(),
-        legend.title = element_blank(),
-        legend.text = element_text(size=8),
-        legend.key.size = unit(0.75,"line"),
-        axis.line = element_line(size=0.1),
-        axis.text = element_text(size=8),
-        axis.title = element_text(size=10),
-        axis.title.x = element_blank(),
-        panel.grid = element_blank()) + scale_y_continuous(expand = c(0,0)) + 
-  ylab("CAM (% of Total Cells)") + 
-  xlab("Treatment")
+tab$Var1<-recode(tab$Var1,"1d BBBO"="1d","3d BBBO"="3d")
+names(ColorsTreatment)<-levels(tab$Var1)
+names(LinesTreatment)<-levels(tab$Var1)
+Pie<-ggplot(tab,aes(x=Var1,y=Freq_Norm*100,fill=Var1,color=Var1))+stat_summary(fun="mean",geom="bar")+scale_fill_manual(values=ColorsTreatment)+scale_color_manual(values=LinesTreatment)+scale_y_continuous(limits = c(0,0.65),breaks = c(0,0.25,0.5),labels=c("0%","25%","50%"),expand = c(0,0),position = "right") + scale_y_continuous(expand = c(0,0)) + 
+  ylab("CAM (% of All Cells)") + 
+  xlab("Treatment")+ThemeBoxPlot
 ```
 
 ```{r}
@@ -283,37 +332,39 @@ rownames(Tota)<-Tota$Full
 tab$Total<-Tota[tab$Full,]$Freq
 tab<-tab[tab$Total>0,]
 tab$Freq_Adj<-tab$Freq/tab$Total
-Percent<-ggplot(tab,aes(x=Var2,y=Freq_Adj*100,fill=Var2,color=Var2))+stat_summary(fun="mean",geom="bar")+scale_fill_manual(values=ColorsTreatment)+scale_color_manual(values=LinesTreatment)+theme(legend.position="none",
-        plot.margin=margin(0.5,0.5,0.5,0.5,"cm"),
-        panel.background = element_blank(),
-        legend.title = element_blank(),
-        legend.text = element_text(size=8),
-        legend.key.size = unit(0.75,"line"),
-        axis.line = element_line(size=0.1),
-        axis.text = element_text(size=8),
-        axis.title = element_text(size=10),
-        axis.title.x = element_blank(),
-        panel.grid = element_blank())+stat_compare_means(method="anova",label.y = 40,size=3) + scale_y_continuous(expand = c(0,0),labels = scales::percent)+ylab("CAM (% of All Cells)")
+Percent<-ggplot(tab,aes(x=Var2,y=Freq_Adj*100,fill=Var2,color=Var2))+stat_summary(fun="mean",geom="bar")+scale_fill_manual(values=ColorsTreatment)+scale_color_manual(values=LinesTreatment)+stat_compare_means(method="anova",label.y = 40,size=3) + scale_y_continuous(expand = c(0,0),labels = scales::percent)+ylab("CAM (% of All Cells)")+ThemeBoxPlot
 
 ```
 
 
 
+# treatment split by cluster
+```{r}
+tab<-as.data.frame(table(CAM$Treatment,CAM$clusters_labeled))
+tot<-as.data.frame(table(CAM$Treatment))
+tab$Freq_Norm<-tab$Freq/tot[tab$Var1,]$Freq*100
+tab<-tab[,setdiff(colnames(tab),"Freq")]
+tab$Var1<-recode(tab$Var1,"1d BBBO"="1d","3d BBBO"="3d")
+Dis<-ggplot(tab,aes(x=Var1,y=Freq_Norm,fill=Var2))+geom_bar(position="fill", stat="identity")+scale_fill_manual(values=ColorMacrophageClusters)+ylab("Cluster Size")+ThemeBoxPlot+scale_y_continuous(expand=c(0,0))
+```
 
 
 # Putting it all together
 ```{r}
-Inset<-ggdraw(Dim1 + theme_half_open(12) + theme(plot.title = element_blank(),axis.ticks = element_blank(),axis.text = element_blank(),legend.position = c(0,0.1))) +
-  draw_plot(Highlight, .7, .7, .3, .3) +
-  draw_plot_label(
-    c("b"),
-    c(0.75),
-    c(0.985),
-    size = 12)
-Volcanos<-plot_grid(Volcano24,Volcano72,nrow = 1,labels = c("g","h"))
-Top<-plot_grid(Inset,plot_grid(Pie,BC3,nrow=1,align = "h",labels = c("c","d"),axis="tb"),rel_widths = c(1,2),labels = c("a",""))
-A<-plot_grid(HM_Ready,plot_grid(Feat,Volcanos,OntPlot,nrow=3,labels = c("f","","i")),nrow=1,labels = c("e"))
-Full<-plot_grid(Top,A,nrow=2,rel_heights = c(0.75,2))
-ggsave("Figure4-CAM.png",width = 8.5,height = 8.5,units = "in",bg="white")
+
+BottomLegs<-plot_grid(HMLeg2,HMLeg1,HMLegGene,nrow=1,rel_widths = c(1,1,1))
+
+
+DisLeg<-get_legend(Dis+theme(legend.position="top",legend.key.size = unit(0.1,"cm"),legend.title = element_blank()))
+
+TopLeg<-plot_grid(DisLeg,FeatLeg,DisLeg,nrow=1,rel_widths = c(1,1.5,1),labels=c("a","b","c"))
+TopPlots<-plot_grid(Dim1+theme(plot.margin = margin(0,0.5,0.25,0.25,"cm")),Feat&theme(plot.margin = margin(0,0.5,0.25,0.25,"cm"),plot.title=element_text(size=10)),Dis+theme(plot.margin = margin(0,0.5,0.25,0.25,"cm")),nrow=1,rel_widths = c(1,1.5,1),align="h",axis="b")
+Mid<-plot_grid(OntoPlot,Pie,nrow=1,rel_widths = c(1.5,1),labels=c("g","h"))
+
+Left<-plot_grid(plot_grid(Volcano24,Volcano72,nrow=1,labels = c("d","e")),Mid,grid.grabExpr(draw(HMPhase1+HMPhase2)),nrow=3,labels=c("","","i"))
+
+Full<-plot_grid(TopLeg,TopPlots,plot_grid(Left,HMGenes,nrow=1,rel_widths = c(2,1),labels=c("","f")),BottomLegs,nrow=4,rel_heights = c(0.15,0.75,2,0.15))
+
+ggsave("Figure4-CAM.png",width = 8,height = 10,units = "in",bg="white")
 ```
 
